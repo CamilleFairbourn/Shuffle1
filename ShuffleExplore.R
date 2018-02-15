@@ -7,6 +7,13 @@ shuffle <- function(total1, total2, totyes){
   return(diff1)
 }
 
-
+require(BHH2)
 props <- replicate(n = 100, shuffle(24,24,35))
 dotPlot(props)
+hist(props)
+View(props)
+head(props)
+df <- data.frame(props)
+df
+ggplot(df, aes(x = props))+
+  geom_dotplot()
