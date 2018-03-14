@@ -24,7 +24,7 @@ ggplot(df, aes(x = props))+
 
 
 
-#Printing a table as a graphic object
+#Code to print a table as a graphic object
 mydata <- data.frame(a=1:50, b=rnorm(50))
 mytable <- cbind(sites=c("site 1","site 2","site 3","site 4"),mydata[10:13,])
 mymatrix <- data.frame(mytable)
