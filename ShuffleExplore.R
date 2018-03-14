@@ -6,11 +6,14 @@ shuffle <- function(total1, total2, totyes){
   diff1 <- prop1[1]-prop1[2]
   return(diff1)
 }
-
+library(ggplot2)
+library(gridExtra)
 require(BHH2)
-props <- replicate(n = 100, shuffle(24,24,35))
-dotPlot(props)
-hist(props)
+props <- replicate(n = 50, shuffle(43,46,12))
+jitprop <- jitter(props)
+dotPlot(jitprop)
+abline(v=0.189, col = "red")
+hist(props, breaks =)
 View(props)
 head(props)
 df <- data.frame(props)
@@ -19,13 +22,12 @@ ggplot(df, aes(x = props))+
   geom_dotplot()
 
 
-library(ggplot2)
-library(gridExtra)
 
-#Create data : we take a subset of the mtcars dataset provided by R:
+
+#Printing a table as a graphic object
 mydata <- data.frame(a=1:50, b=rnorm(50))
 mytable <- cbind(sites=c("site 1","site 2","site 3","site 4"),mydata[10:13,])
-
+mymatrix <- data.frame(mytable)
 # --- Graph 1 : If you want ONLY the table in your image :
 # First I create an empty graph with absolutely nothing :
 qplot(mymatrix, geom = "blank") + theme_bw() + theme(line = element_blank(), text = element_blank()) +
@@ -38,9 +40,13 @@ my_plot <- ggplot(mydata,aes(x=a,y=b)) + geom_point(colour="blue") +   geom_poin
   annotation_custom(tableGrob(mytable), xmin=35, xmax=50, ymin=-2.5, ymax=-1)
 my_plot
 
-
+#Create the promotion/gender contingency table
 myvector <- c(21,3,24,14,10,24,35,13,48)
-mymatrix <- matrix(myvector, nrow = 3, ncol = 3, dimnames = list(c("Category 1","Category 2", "Total"),
-                                                                  c("Condition 1", "Condition 2", "Total")))
-mydata <- as.data.frame(mymatrix)
-mytable <- mydata
+mymatrix <- matrix(myvector, nrow = 3, ncol = 3, dimnames = list(c("Male","Female", "Total"),
+                                                                  c("Promoted", "Not Promoted", "Total")))
+mydata <- data.frame(mymatrix)
+
+
+qplot(mydata, geom = "blank") + theme_bw() + theme(line = element_blank(), text = element_blank()) +
+  # Then I add my table :
+  annotation_custom(grob = tableGrob(mymatrix))
