@@ -1,7 +1,6 @@
 library(shiny)
 library(ggplot2)
 library(dplyr)
-library(plyr)
 library(BHH2)
 library(gridExtra)
 library(rhandsontable)
@@ -72,18 +71,22 @@ server <- function(input, output) {
       } else {
         y.coords <- c(y.coords, sort(rep(1:(counts[i]/4), counts[i])))
       }
-      if (input$inequality == "greater than"){
-        if (names(counts)[i] >= input$cutoff){
-          to.red <- c(to.red, rep("red", counts[i]))
+      if(!is.na(as.numeric(input$cutoff))){
+        if (input$inequality == "greater than"){
+          if (names(counts)[i] >= as.numeric(input$cutoff)){
+            to.red <- c(to.red, rep("red", counts[i]))
+          } else {
+            to.red <- c(to.red, rep("black", counts[i]))
+          }
         } else {
-          to.red <- c(to.red, rep("black", counts[i]))
+          if (names(counts)[i] <= as.numeric(input$cutoff)){
+            to.red <- c(to.red, rep("red", counts[i]))
+          } else {
+            to.red <- c(to.red, rep("black", counts[i]))
+          }
         }
       } else {
-        if (names(counts)[i] <= input$cutoff){
-          to.red <- c(to.red, rep("red", counts[i]))
-        } else {
-          to.red <- c(to.red, rep("black", counts[i]))
-        }
+        to.red <- c(to.red, rep("black", counts[i]))
       }
     }
     return(data.frame("x" = x.coords, "y" = y.coords*4, "red" = to.red))
@@ -114,11 +117,11 @@ server <- function(input, output) {
   update_counts <- eventReactive(c(input$cutoff, input$Replicate, input$Reset, input$inequality), {
     if (!is.na(as.numeric(input$cutoff))){
       if (input$inequality == "greater than"){
-      values$prob <- sum(values$props >= input$cutoff)/length(values$props)
-      values$count <- sum(values$props >= input$cutoff)
+      values$prob <- sum(values$props >= as.numeric(input$cutoff))/length(values$props)
+      values$count <- sum(values$props >= as.numeric(input$cutoff))
       } else {
-        values$prob <- sum(values$props <= input$cutoff)/length(values$props)
-        values$count <- sum(values$props <= input$cutoff)
+        values$prob <- sum(values$props <= as.numeric(input$cutoff))/length(values$props)
+        values$count <- sum(values$props <= as.numeric(input$cutoff))
       }
     }
   })
