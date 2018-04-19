@@ -52,6 +52,13 @@ server <- function(input, output) {
     return(diff1)
   }
   
+  #determines the number of decimal places of a number
+  decimalcount<-function(x){stopifnot(class(x)=="character")
+    x<-gsub("(.*)(\\.)|([0]*$)","",x)
+    as.numeric(nchar(x))
+  }
+ 
+  
   #create dotplot locations from data x
   dotplot_locs <- function(x){
     counts <- table(x)
@@ -63,6 +70,7 @@ server <- function(input, output) {
     x.coords <- vector()
     y.coords <- vector()
     to.red <- vector()
+    names.counts <- as.numeric(names(counts))
     for (i in 1:length(counts)){
       x.coords <- c(x.coords, rep(x.coord[, i], counts[i]/4), x.coord[0:(counts[i] %% 4), i])
       if (counts[i] > 4){
@@ -72,14 +80,16 @@ server <- function(input, output) {
         y.coords <- c(y.coords, sort(rep(1:(counts[i]/4), counts[i])))
       }
       if(!is.na(as.numeric(input$cutoff))){
+        num.decimals <- decimalcount(as.character(input$cutoff))
+        error <- ifelse(num.decimals == 0, 0, 0.1^num.decimals/2)
         if (input$inequality == "greater than"){
-          if (names(counts)[i] >= as.numeric(input$cutoff)){
+          if (names.counts[i] >= as.numeric(input$cutoff)-error){
             to.red <- c(to.red, rep("red", counts[i]))
           } else {
             to.red <- c(to.red, rep("black", counts[i]))
           }
         } else {
-          if (names(counts)[i] <= as.numeric(input$cutoff)){
+          if (names.counts[i] <= as.numeric(input$cutoff)+error){
             to.red <- c(to.red, rep("red", counts[i]))
           } else {
             to.red <- c(to.red, rep("black", counts[i]))
@@ -97,7 +107,7 @@ server <- function(input, output) {
                            cond1 = NA, numsamp = 1)
   
   #these will update each time the user clicks the Replicate button
-  observeEvent(input$Replicate, {
+  observeEvent(input$Replicate || input$Show.Observed, {
     mylist$cat1 = values[['DF']][1, 3]
     mylist$cat2 = values[['DF']][2, 3]
     mylist$cond1 = values[['DF']][3, 1]
@@ -147,9 +157,7 @@ server <- function(input, output) {
   
   output$Observed.Diff <- renderText({
     if (input$Show.Observed){
-      if (length(values$props) != 0){
         paste("Observed Difference:", round(mylist$observed, 3))
-      }
     }
   })
   
@@ -188,15 +196,12 @@ server <- function(input, output) {
     DF
   })
   
-  
-  
   output$hot <- renderRHandsontable({
     DF = data()
     if (!is.null(DF))
       rhandsontable(DF, colHeaders = c(unlist(strsplit(input$colnames, ",")), "Total"),
                     rowHeaders = c(unlist(strsplit(input$rownames, ",")), "Total"))
   })
-  
   
   
 }
