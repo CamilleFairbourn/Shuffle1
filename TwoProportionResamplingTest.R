@@ -58,7 +58,6 @@ server <- function(input, output) {
     as.numeric(nchar(x))
   }
  
-  
   #create dotplot locations from data x
   dotplot_locs <- function(x){
     counts <- table(x)
@@ -126,12 +125,14 @@ server <- function(input, output) {
   
   update_counts <- eventReactive(c(input$cutoff, input$Replicate, input$Reset, input$inequality), {
     if (!is.na(as.numeric(input$cutoff))){
+      num.decimals <- decimalcount(as.character(input$cutoff))
+      error <- ifelse(num.decimals == 0, 0, 0.1^num.decimals/2)
       if (input$inequality == "greater than"){
-      values$prob <- sum(values$props >= as.numeric(input$cutoff))/length(values$props)
-      values$count <- sum(values$props >= as.numeric(input$cutoff))
+      values$prob <- sum(values$props >= as.numeric(input$cutoff)-error)/length(values$props)
+      values$count <- sum(values$props >= as.numeric(input$cutoff)-error)
       } else {
-        values$prob <- sum(values$props <= as.numeric(input$cutoff))/length(values$props)
-        values$count <- sum(values$props <= as.numeric(input$cutoff))
+        values$prob <- sum(values$props <= as.numeric(input$cutoff)+error)/length(values$props)
+        values$count <- sum(values$props <= as.numeric(input$cutoff)+error)
       }
     }
   })
@@ -139,6 +140,10 @@ server <- function(input, output) {
   output$RandomPlot1 <- renderPlot({
     update_vals()
     if (length(values$props) != 0){ # after reset, values$props is empty
+      DF <- values[['DF']]
+      possible_x <- max(0, DF[3, 1]-DF[2, 3]):min(DF[3, 1],DF[1, 3])/DF[1, 3]-
+        min(DF[1, 3], DF[3, 1]):max(0, DF[3, 1]-DF[1, 3])/DF[2, 3]
+      
       df <- dotplot_locs(values$props)
       myplot <- ggplot(df)  +
         geom_point(aes(x ,y), size=50/length(values$props)^0.5) + 
@@ -150,7 +155,9 @@ server <- function(input, output) {
           theme(legend.position="none")
         myplot <- myplot + geom_vline(xintercept = as.numeric(input$cutoff), color = "red")
       }
-      myplot
+      myplot + scale_y_continuous(limits = c(min(df$y), max(10,max(df$y)))) +
+        scale_x_continuous(limits = c(-max(abs(max(df$x)), abs(min(df$x))),
+                                      max(abs(max(df$x)), abs(min(df$x))))) #breaks = round(possible_x,3)
     }
   })
   
@@ -168,12 +175,14 @@ server <- function(input, output) {
   output$counts <- renderText({
     update_counts()
     if (!is.null(values$prob)){
-      if (!is.na(as.numeric(input$cutoff))){
-        paste(values$count, "/", length(values$props), " (", round(values$prob, 3), ")", sep = "")
+      if (is.na(values$prob)){
+        " "
+      } else if (!is.na(as.numeric(input$cutoff))){
+        paste(values$count, "/", length(values$props), " (", round(values$prob, 4), ")", sep = "")
       } else if (nchar(input$cutoff)!=0){
         "Invalid Cutoff!"
       } else {
-        ""
+        " "
       }
     }
   })
@@ -184,7 +193,9 @@ server <- function(input, output) {
       DF = hot_to_r(input$hot)
     } else {
       if (is.null(values[["DF"]])){
-        DF = data.frame("X1" = c(21, 14, 35), "X2" = c(3, 10, 13))
+        #DF = data.frame("X1" = c(21, 14, 35), "X2" = c(3, 10, 13))
+        #DF = data.frame("X1" = c(2593, 5386, 0), "X2" = c(65000, 154592, 0))
+        DF = data.frame("X1" = c(11, 14, 0), "X2" = c(39, 26, 0))
       }
       else{
         DF = values[["DF"]]
@@ -198,9 +209,10 @@ server <- function(input, output) {
   
   output$hot <- renderRHandsontable({
     DF = data()
-    if (!is.null(DF))
+    if (!is.null(DF)){
       rhandsontable(DF, colHeaders = c(unlist(strsplit(input$colnames, ",")), "Total"),
                     rowHeaders = c(unlist(strsplit(input$rownames, ",")), "Total"))
+    }
   })
   
   
