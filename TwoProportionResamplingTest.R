@@ -9,20 +9,24 @@ library(rhandsontable)
 ui <- fluidPage(titlePanel("Two Proportion Resampling Test"),
                 sidebarLayout(
                   sidebarPanel(
-                    numericInput("numsamp", "Shuffle how many times?", value = 100, min = 1),
-                    hr(),
+                    tabsetPanel(
+                      tabPanel("Shuffle",
                     tags$div(class="header", checked = NA,
                              tags$p("Explanatory Text Here"),
                              tags$p("And Some More Stuff Here")
                     ),
+                    hr(),
                     textInput("colnames", "Enter Column Names (separated by comma)",
                               value = "Pro, No Pro", placeholder = "Pro, No Pro"),
                     textInput("rownames", "Enter Row Names (separated by comma)",
                               value = "Male, Female", placeholder = "Male, Female"),
                     rHandsontableOutput("hot"),
-                    actionButton("Replicate", "Shuffle"),
-                    actionButton("Reset", "Reset")
+                    actionButton("Reset", "Reset"),
+                    numericInput("numsamp", "Shuffle how many times?", value = 100, min = 1),
+                    actionButton("Replicate", "Shuffle")
                   ),
+                  tabPanel("Instructions", "Some Instructions")
+                  )),
                   
                   mainPanel(              
                     plotOutput("RandomPlot1"),
