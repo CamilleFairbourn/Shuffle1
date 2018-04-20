@@ -16,6 +16,7 @@ ui <- fluidPage(titlePanel("Two Proportion Resampling Test"),
                              tags$p("And Some More Stuff Here")
                     ),
                     hr(),
+                    switchInput("plot", value = TRUE, onLabel = "Dotplot", offLabel = "Histogram"),
                     selectInput("presets", "Presets", c("Gender Discrimination",
                                                         "Opportunity Cost",
                                                         "Avandia")),
@@ -119,6 +120,7 @@ server <- function(input, output) {
     return(data.frame("x" = x.coords, "y" = y.coords*n, "red" = to.red))
   }
   
+  
   #set up starting values for the app
   mylist <- reactiveValues(cat1 = NA, cat2 = NA,
                            cond1 = NA, numsamp = 1)
@@ -162,30 +164,47 @@ server <- function(input, output) {
       DF <- values[['DF']]
       possible_x <- max(0, DF[3, 1]-DF[2, 3]):min(DF[3, 1],DF[1, 3])/DF[1, 3]-
         min(DF[3, 1],DF[1, 3]):max(0, DF[3, 1]-DF[2, 3])/DF[1, 3]
-      
-      if (DF[3, 1] > 1000){
-        n <- 1
-      } else {
-        n <- 4
-      }
-      
-      df <- dotplot_locs(values$props, n)
-      myplot <- ggplot(df)  +
-        geom_point(aes(x ,y), size=min(n, 50/length(values$props)^0.5)) + 
-        theme(legend.position="none")
-      if (!is.na(as.numeric(input$cutoff))){
+      if (input$plot == TRUE){
+        if (DF[3, 1] > 1000){
+          n <- 1
+        } else {
+          n <- 4
+        }
+        df <- dotplot_locs(values$props, n)
         myplot <- ggplot(df)  +
-          geom_point(aes(x ,y, colour = red), size=min(n, 50/length(values$props)^0.5)) +
-          scale_colour_manual(name = "red",values = c("black", "red")) + 
+          geom_point(aes(x ,y), size=min(n, 50/length(values$props)^0.5)) + 
           theme(legend.position="none")
-        myplot <- myplot + geom_vline(xintercept = as.numeric(input$cutoff), color = "red")
+        if (!is.na(as.numeric(input$cutoff))){
+          myplot <- ggplot(df)  +
+            geom_point(aes(x ,y, colour = red), size=min(n, 50/length(values$props)^0.5)) +
+            scale_colour_manual(name = "red",values = c("black", "red")) + 
+            theme(legend.position="none")
+          myplot <- myplot + geom_vline(xintercept = as.numeric(input$cutoff), color = "red")
+        }
+        myplot + scale_y_continuous(limits = c(0, max(n*7.5,max(df$y)))) +
+          scale_x_continuous(limits = c(-max(abs(max(df$x)), abs(min(df$x))),
+                                        max(abs(max(df$x)), abs(min(df$x))))) #breaks = round(possible_x,3)
+      } else {
+        df <- data.frame("x" = values$props)
+        myplot <- ggplot(df, aes(x=x)) + geom_histogram() 
+        if (!is.na(as.numeric(input$cutoff))){
+          names.counts <- ggplot_build(myplot)$data[[1]]$x
+          num.decimals <- decimalcount(as.character(input$cutoff))
+          error <- ifelse(num.decimals == 0, 0, 0.1^num.decimals/2)
+          if (input$inequality == "greater than"){
+            to.red <- which(names.counts >= as.numeric(input$cutoff)-error)
+            red <- rep("black", length(names.counts))
+            red[to.red] <- "red"
+          } else {
+            to.red <- which(names.counts <= as.numeric(input$cutoff)+error)
+            red <- rep("black", length(names.counts))
+            red[to.red] <- "red"
+          }
+          myplot <- ggplot(df, aes(x=x)) + geom_histogram(fill = red) + geom_vline(xintercept = as.numeric(input$cutoff), color = "red")
+        }
       }
-      myplot + scale_y_continuous(limits = c(0, max(n*7.5,max(df$y)))) +
-        scale_x_continuous(limits = c(-max(abs(max(df$x)), abs(min(df$x))),
-                                      max(abs(max(df$x)), abs(min(df$x))))) #breaks = round(possible_x,3)
-    } #else {
-      #ggplot() + geom_blank()
-    #}
+      myplot
+    }
   })
   
   
