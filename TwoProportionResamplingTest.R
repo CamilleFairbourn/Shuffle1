@@ -59,24 +59,29 @@ server <- function(input, output) {
   }
  
   #create dotplot locations from data x
-  dotplot_locs <- function(x){
+  dotplot_locs <- function(x, n){
     counts <- table(x)
     x.locs <- as.numeric(names(counts))
-    point_dist <- min(diff(as.numeric(names(counts))))/6
+    point_dist <- min(diff(c(0, as.numeric(names(counts)))))/(n+2)
 
-    x.coord <- sapply(x.locs, function(x) x + ((1:4)-2.5)*point_dist)
+    x.coord <- sapply(x.locs, function(x) x + ((1:n)-(n+1)/2)*point_dist)
     
     x.coords <- vector()
     y.coords <- vector()
     to.red <- vector()
     names.counts <- as.numeric(names(counts))
     for (i in 1:length(counts)){
-      x.coords <- c(x.coords, rep(x.coord[, i], counts[i]/4), x.coord[0:(counts[i] %% 4), i])
-      if (counts[i] > 4){
-        y.coords <- c(y.coords, sort(rep(1:(counts[i]/4), 4)),
-                      rep(ceiling(counts[i]/4), counts[i] %% 4))
+      if (n == 1){
+        x.coords <- c(x.coords, rep(x.coord[i], counts[i]/n))
       } else {
-        y.coords <- c(y.coords, sort(rep(1:(counts[i]/4), counts[i])))
+        x.coords <- c(x.coords, rep(x.coord[, i], counts[i]/n), x.coord[0:(counts[i] %% n), i])
+      }
+      
+      if (counts[i] > n){
+        y.coords <- c(y.coords, sort(rep(1:(counts[i]/n), n)),
+                      rep(ceiling(counts[i]/n), counts[i] %% n))
+      } else {
+        y.coords <- c(y.coords, sort(rep(1:(counts[i]/n), counts[i])))
       }
       if(!is.na(as.numeric(input$cutoff))){
         num.decimals <- decimalcount(as.character(input$cutoff))
@@ -98,7 +103,7 @@ server <- function(input, output) {
         to.red <- c(to.red, rep("black", counts[i]))
       }
     }
-    return(data.frame("x" = x.coords, "y" = y.coords*4, "red" = to.red))
+    return(data.frame("x" = x.coords, "y" = y.coords*n, "red" = to.red))
   }
   
   #set up starting values for the app
@@ -113,6 +118,7 @@ server <- function(input, output) {
     mylist$numsamp = input$numsamp
     mylist$observed = values[['DF']][1 ,1]/values[['DF']][1, 3] - values[['DF']][2 ,1]/values[['DF']][2, 3]
   })
+  
   
   observeEvent(input$Reset, {
     values$props <- vector()
@@ -142,11 +148,16 @@ server <- function(input, output) {
     if (length(values$props) != 0){ # after reset, values$props is empty
       DF <- values[['DF']]
       possible_x <- max(0, DF[3, 1]-DF[2, 3]):min(DF[3, 1],DF[1, 3])/DF[1, 3]-
-        min(DF[1, 3], DF[3, 1]):max(0, DF[3, 1]-DF[1, 3])/DF[2, 3]
+        min(DF[3, 1],DF[1, 3]):max(0, DF[3, 1]-DF[2, 3])/DF[1, 3]
+      if (DF[3, 1] > 1000){
+        n <- 1
+      } else {
+        n <- 4
+      }
       
-      df <- dotplot_locs(values$props)
+      df <- dotplot_locs(values$props, n)
       myplot <- ggplot(df)  +
-        geom_point(aes(x ,y), size=50/length(values$props)^0.5) + 
+        geom_point(aes(x ,y), size=min(20, 50/length(values$props)^0.5)) + 
         theme(legend.position="none")
       if (!is.na(as.numeric(input$cutoff))){
         myplot <- ggplot(df)  +
@@ -155,7 +166,7 @@ server <- function(input, output) {
           theme(legend.position="none")
         myplot <- myplot + geom_vline(xintercept = as.numeric(input$cutoff), color = "red")
       }
-      myplot + scale_y_continuous(limits = c(min(df$y), max(10,max(df$y)))) +
+      myplot + scale_y_continuous(limits = c(0, max(10,max(df$y)))) +
         scale_x_continuous(limits = c(-max(abs(max(df$x)), abs(min(df$x))),
                                       max(abs(max(df$x)), abs(min(df$x))))) #breaks = round(possible_x,3)
     }
@@ -164,6 +175,8 @@ server <- function(input, output) {
   
   output$Observed.Diff <- renderText({
     if (input$Show.Observed){
+      DF <- data()
+      mylist$observed = values[['DF']][1 ,1]/values[['DF']][1, 3] - values[['DF']][2 ,1]/values[['DF']][2, 3]
         paste("Observed Difference:", round(mylist$observed, 3))
     }
   })
@@ -194,8 +207,8 @@ server <- function(input, output) {
     } else {
       if (is.null(values[["DF"]])){
         #DF = data.frame("X1" = c(21, 14, 35), "X2" = c(3, 10, 13))
-        #DF = data.frame("X1" = c(2593, 5386, 0), "X2" = c(65000, 154592, 0))
-        DF = data.frame("X1" = c(11, 14, 0), "X2" = c(39, 26, 0))
+        DF = data.frame("X1" = c(2593, 5386, 0), "X2" = c(65000, 154592, 0))
+        #DF = data.frame("X1" = c(11, 14, 0), "X2" = c(39, 26, 0))
       }
       else{
         DF = values[["DF"]]
