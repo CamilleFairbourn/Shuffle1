@@ -16,6 +16,9 @@ ui <- fluidPage(titlePanel("Two Proportion Resampling Test"),
                              tags$p("And Some More Stuff Here")
                     ),
                     hr(),
+                    selectInput("presets", "Presets", c("Gender Discrimination",
+                                                        "Opportunity Cost",
+                                                        "Avandia")),
                     textInput("colnames", "Enter Column Names (separated by comma)",
                               value = "Pro, No Pro", placeholder = "Pro, No Pro"),
                     textInput("rownames", "Enter Row Names (separated by comma)",
@@ -46,6 +49,7 @@ ui <- fluidPage(titlePanel("Two Proportion Resampling Test"),
 server <- function(input, output) {
   values <- reactiveValues()
   values$props <- vector()
+  values$table.names <- c("Pro", "No Pro", "Male", "Female")
   
   #This function will do the shuffling
   shuffle <- function(total1, total2, totyes){
@@ -129,7 +133,7 @@ server <- function(input, output) {
   })
   
   
-  observeEvent(input$Reset, {
+  observeEvent(c(input$Reset, input$hot), {
     values$props <- vector()
   })
   
@@ -214,30 +218,49 @@ server <- function(input, output) {
   })
   
   
-  data = reactive({
+  observeEvent(input$presets, {
+    if (input$presets == "Gender Discrimination"){
+      DF <- data.frame("X1" = c(21, 14, 35), "X2" = c(3, 10, 13))
+      DF[3, ] <- apply(DF[-3, ], 2, sum)
+      DF[, 3] <- apply(DF[, -3], 1, sum)
+      values[["DF"]] <- DF
+      values$table.names <- c("Pro", "No Pro", "Male", "Female")
+    } else if (input$presets == "Opportunity Cost"){
+      DF <- data.frame("X1" = c(46, 51, 97), "X2" = c(29, 24, 53))
+      DF[3, ] <- apply(DF[-3, ], 2, sum)
+      DF[, 3] <- apply(DF[, -3], 1, sum)
+      values[["DF"]] <- DF
+      values$table.names <- c("buy DVD", "not buy DVD", "control", "treatment")
+    } else if (input$presets == "Avandia"){
+      DF = data.frame("X1" = c(2593, 5386, 7979), "X2" = c(65000, 154592, 219592))
+      DF[3, ] <- apply(DF[-3, ], 2, sum)
+      DF[, 3] <- apply(DF[, -3], 1, sum)
+      values[["DF"]] <- DF
+      values$table.names <- c("Yes", "No", "Rosiglitazone", "Pioglitazone")
+    }
+  })
+  
+  observeEvent(c(input$colnames, input$rownames), {
+    values$table.names <- c(unlist(strsplit(input$colnames, ",")), unlist(strsplit(input$rownames, ",")))
+  })
+  
+  
+  observeEvent(input$hot, {
     if (!is.null(input$hot)) {
       DF = hot_to_r(input$hot)
     } else {
-      if (is.null(values[["DF"]])){
-  
-          #DF = data.frame("X1" = c(21, 14, 35), "X2" = c(3, 10, 13))
-          #DF = data.frame("X1" = c(46, 51, 97), "X2" = c(29, 24, 53))
-          DF = data.frame("X1" = c(2593, 5386, 7979), "X2" = c(65000, 154592, 219592))
-      } else{
         DF = values[["DF"]]
-      }
     }
     DF[3, ] <- apply(DF[-3, ], 2, sum)
     DF[, 3] <- apply(DF[, -3], 1, sum)
     values[["DF"]] = DF
-    DF
   })
   
   output$hot <- renderRHandsontable({
-    DF = data()
+    DF = values[['DF']]
     if (!is.null(DF)){
-      rhandsontable(DF, colHeaders = c(unlist(strsplit(input$colnames, ",")), "Total"),
-                    rowHeaders = c(unlist(strsplit(input$rownames, ",")), "Total"))
+      rhandsontable(DF, colHeaders = c(values$table.names[1:2], "Total"),
+                    rowHeaders = c(values$table.names[3:4], "Total"))
     }
   })
   
