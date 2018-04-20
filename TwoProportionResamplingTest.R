@@ -31,7 +31,7 @@ ui <- fluidPage(titlePanel("Two Proportion Resampling Test"),
                   ),
                   
                   mainPanel(              
-                    plotOutput("RandomPlot1")
+                    plotOutput("RandomPlot1"),
                   )
                 )
 )
