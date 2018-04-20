@@ -20,18 +20,19 @@ ui <- fluidPage(titlePanel("Two Proportion Resampling Test"),
                     textInput("rownames", "Enter Row Names (separated by comma)",
                               value = "Male, Female", placeholder = "Male, Female"),
                     rHandsontableOutput("hot"),
-                    actionButton("Replicate", "Replicate!"),
-                    actionButton("Reset", "Reset"),
-                    checkboxInput("Show.Observed", "Show observed difference", FALSE),
-                    textOutput("Observed.Diff"),
-                    textOutput("count.samples"),
-                    selectInput("inequality", NULL, c("greater than", "less than")),
-                    textInput("cutoff", NULL),
-                    textOutput("counts")
+                    actionButton("Replicate", "Shuffle"),
+                    actionButton("Reset", "Reset")
                   ),
                   
                   mainPanel(              
                     plotOutput("RandomPlot1"),
+                    checkboxInput("Show.Observed", "Show observed difference", FALSE),
+                    textOutput("Observed.Diff"),
+                    fluidRow(
+                    column(textOutput("count.samples"), width = 3),
+                    column(selectInput("inequality", NULL, c("greater than", "less than")), width = 3),
+                    column(textInput("cutoff", NULL), width = 4),
+                    textOutput("counts"))
                   )
                 )
 )
@@ -62,7 +63,11 @@ server <- function(input, output) {
   dotplot_locs <- function(x, n){
     counts <- table(x)
     x.locs <- as.numeric(names(counts))
-    point_dist <- min(diff(c(0, as.numeric(names(counts)))))/(n+2)
+    if (length(names(counts)) == 1){
+      point_dist <- min(diff(c(0, as.numeric(names(counts)))))/(n+2)
+    } else {
+      point_dist <- min(diff(as.numeric(names(counts))))/(n+2)
+    }
 
     x.coord <- sapply(x.locs, function(x) x + ((1:n)-(n+1)/2)*point_dist)
     
@@ -149,6 +154,7 @@ server <- function(input, output) {
       DF <- values[['DF']]
       possible_x <- max(0, DF[3, 1]-DF[2, 3]):min(DF[3, 1],DF[1, 3])/DF[1, 3]-
         min(DF[3, 1],DF[1, 3]):max(0, DF[3, 1]-DF[2, 3])/DF[1, 3]
+      
       if (DF[3, 1] > 1000){
         n <- 1
       } else {
@@ -157,20 +163,23 @@ server <- function(input, output) {
       
       df <- dotplot_locs(values$props, n)
       myplot <- ggplot(df)  +
-        geom_point(aes(x ,y), size=min(20, 50/length(values$props)^0.5)) + 
+        geom_point(aes(x ,y), size=min(n, 50/length(values$props)^0.5)) + 
         theme(legend.position="none")
       if (!is.na(as.numeric(input$cutoff))){
         myplot <- ggplot(df)  +
-          geom_point(aes(x ,y, colour = red), size=50/length(values$props)^0.5) +
+          geom_point(aes(x ,y, colour = red), size=min(n, 50/length(values$props)^0.5)) +
           scale_colour_manual(name = "red",values = c("black", "red")) + 
           theme(legend.position="none")
         myplot <- myplot + geom_vline(xintercept = as.numeric(input$cutoff), color = "red")
       }
-      myplot + scale_y_continuous(limits = c(0, max(10,max(df$y)))) +
+      myplot + scale_y_continuous(limits = c(0, max(n*7.5,max(df$y)))) +
         scale_x_continuous(limits = c(-max(abs(max(df$x)), abs(min(df$x))),
                                       max(abs(max(df$x)), abs(min(df$x))))) #breaks = round(possible_x,3)
-    }
+    } #else {
+      #ggplot() + geom_blank()
+    #}
   })
+  
   
   
   output$Observed.Diff <- renderText({
@@ -206,11 +215,11 @@ server <- function(input, output) {
       DF = hot_to_r(input$hot)
     } else {
       if (is.null(values[["DF"]])){
-        #DF = data.frame("X1" = c(21, 14, 35), "X2" = c(3, 10, 13))
-        DF = data.frame("X1" = c(2593, 5386, 0), "X2" = c(65000, 154592, 0))
-        #DF = data.frame("X1" = c(11, 14, 0), "X2" = c(39, 26, 0))
-      }
-      else{
+  
+          #DF = data.frame("X1" = c(21, 14, 35), "X2" = c(3, 10, 13))
+          #DF = data.frame("X1" = c(46, 51, 97), "X2" = c(29, 24, 53))
+          DF = data.frame("X1" = c(2593, 5386, 7979), "X2" = c(65000, 154592, 219592))
+      } else{
         DF = values[["DF"]]
       }
     }
